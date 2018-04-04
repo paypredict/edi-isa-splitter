@@ -1,10 +1,9 @@
 package io.github.paypredict.isa.splitter
 
-import java.io.*
+import java.io.File
+import java.io.IOException
+import java.io.PrintWriter
 import java.util.*
-import java.util.zip.GZIPOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import kotlin.concurrent.thread
 
 fun main(args: Array<String>) {
@@ -35,10 +34,12 @@ class Splitter(private val srcDir: File, private val dstDir: File) {
                 if (srcDir.path.isBlank()) throw IOException("Invalid source directory '${srcDir.path}'")
                 if (dstDir.path.isBlank()) throw IOException("Invalid target directory '${dstDir.path}'")
                 if (!srcDir.isDirectory) throw IOException("Source directory '${srcDir.absolutePath}' not found")
-                if (dstDir.exists()) throw IOException("Target directory '${dstDir.absolutePath}' already exists")
 
                 dstDir.mkdirs()
-                errLog = PrintWriter(GZIPOutputStream(dstDir.resolve("log.gz").outputStream()))
+                errLog = PrintWriter(
+                    dstDir.resolve("log.txt").also { it.backupLog() }.outputStream(),
+                    true
+                )
 
                 val all = srcDir.walk().filter { it.isFile }.toList()
                 val progress = Progress(all.size, 0)
@@ -53,7 +54,6 @@ class Splitter(private val srcDir: File, private val dstDir: File) {
                     progress.value++
                     onProgress(progress.copy())
                 }
-                clientMap.values.forEach { it.close() }
                 onFinish()
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -66,37 +66,53 @@ class Splitter(private val srcDir: File, private val dstDir: File) {
     }
 
 
-    private class ClientZip(
-        val srcDir: File,
-        dstDir: File,
-        id: String
-    ) : AutoCloseable {
-
-        private val zip: ZipOutputStream = ZipOutputStream(FileOutputStream(dstDir.resolve("$id.zip"))).apply {
-            setMethod(ZipOutputStream.DEFLATED)
-            setLevel(9)
-        }
-
-        override fun close() {
-            zip.close()
-        }
-
-        fun add(file: File, index: Int, data: String) {
-            val name = file.relativeTo(srcDir).normalize().resolve("$index")
-                .path.replace('\\', '/')
-            zip.putNextEntry(ZipEntry(name))
-            zip.write(data.toByteArray(ISA.CHARSET))
+    private fun File.backupLog() {
+        val dir = parentFile
+        val baseName = ".log-" + java.sql.Date(System.currentTimeMillis()).toString()
+        for (index in 1..100000) {
+            if (renameTo(dir.resolve("$baseName-$index.txt"))) break
         }
     }
 
-    private val clientMap = mutableMapOf<String, ClientZip>()
+    private class ClientDir(
+        val srcDir: File,
+        dstDir: File,
+        client: Client
+    ) {
+
+        private val dir = dstDir.resolve(client.id).apply {
+            mkdir()
+        }
+
+        fun add(file: File, index: Int, data: String) {
+            val path = file.relativeTo(srcDir).normalize().path
+            when (index) {
+                -1 -> dir.resolve(path)
+                else -> dir.resolve(path).resolve("$index")
+            }.apply {
+                parentFile.mkdirs()
+                val bytes = data.toByteArray(ISA.CHARSET)
+                if (!isFile || length() != bytes.size.toLong()) {
+                    writeBytes(bytes)
+                }
+            }
+        }
+    }
+
+    private val clientMap = mutableMapOf<String, ClientDir>()
 
     private fun File.split() {
-        ISA.read(this).forEachIndexed { index, isa ->
-            val clientId = isa.clientId
-            if (clientId.isNotEmpty()) {
-                val clientZip = clientMap.getOrPut(clientId) { ClientZip(srcDir, dstDir, clientId) }
-                clientZip.add(this, index, isa.data)
+        val isaList = ISA.read(this)
+        isaList.forEachIndexed { index, isa ->
+            isa.client?.let { client ->
+                val clientDir = clientMap.getOrPut(client.id) {
+                    ClientDir(srcDir, dstDir, client)
+                }
+                clientDir.add(
+                    this,
+                    if (isaList.size == 1) -1 else index,
+                    isa.data
+                )
             }
         }
     }

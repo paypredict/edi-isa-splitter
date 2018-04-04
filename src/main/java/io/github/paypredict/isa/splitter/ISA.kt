@@ -100,27 +100,29 @@ class ISA private constructor(text: String, start: Int, end: Int, private val de
         "ST*".segments().getOrNull(1) ?: ""
     }
 
-    val clientId: String by lazy {
+    val client: Client? by lazy {
         when(ST) {
-            "835" -> client835Id()
-            "837" -> client837Id()
-            else -> ""
+            "835" -> client835()
+            "837" -> client837()
+            else -> null
         }
     }
 
-    private fun client835Id(): String {
+    private fun client835(): Client? {
         val segments = "N1*PE*".segments()
-        val N104 = segments.getOrNull(4)
-        return N104 ?: ""
+        val N102 = segments.getOrNull(2) ?: ""
+        val N104 = segments.getOrNull(4) ?: return null
+        return Client(N104, N102)
     }
 
-    private fun client837Id(): String {
+    private fun client837(): Client? {
         val segments = "NM1*85*".segments()
+        val NM103 = segments.getOrNull(3) ?: ""
         val NM108 = segments.getOrNull(8)
         val NM109 = segments.getOrNull(9)
-        return when(NM108) {
-            "XX" -> NM109 ?: ""
-            else -> ""
+        return when {
+            NM108 == "XX" && NM109 != null -> Client(NM109, NM103)
+            else -> null
         }
     }
 
@@ -130,6 +132,10 @@ class ISA private constructor(text: String, start: Int, end: Int, private val de
                 ?: return emptyList()
         return code.split(delimiters.separator1)
     }
+}
+
+data class Client(val id: String, val name: String) {
+    override fun toString(): String = "$name ($id)"
 }
 
 class ISAException(message: String): IOException(message)
