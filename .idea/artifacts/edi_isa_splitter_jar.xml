@@ -1,0 +1,12 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="edi-isa-splitter:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/edi_isa_splitter_jar</output-path>
+    <root id="archive" name="edi-isa-splitter.jar">
+      <element id="module-output" name="edi-isa-splitter" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/annotations/13.0/annotations-13.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/kotlin/kotlin-stdlib-jdk8/1.2.31/kotlin-stdlib-jdk8-1.2.31.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/kotlin/kotlin-stdlib-jdk7/1.2.31/kotlin-stdlib-jdk7-1.2.31.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/kotlin/kotlin-stdlib/1.2.31/kotlin-stdlib-1.2.31.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
