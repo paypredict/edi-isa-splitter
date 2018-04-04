@@ -118,6 +118,9 @@ public class SplitterUI {
         jFrame.setContentPane(ui.mainPanel);
         jFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         jFrame.pack();
+        final Dimension size = jFrame.getSize();
+        size.width = Math.max(540, size.width);
+        jFrame.setSize(size);
         jFrame.setLocationRelativeTo(null);
         jFrame.setVisible(true);
     }
