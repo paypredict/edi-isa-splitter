@@ -21,12 +21,6 @@ class Splitter(private val srcDir: File, private val dstDir: File) {
     var onError: (Throwable) -> Unit = {}
 
     fun start() {
-        val now = Date()
-        if (now > java.sql.Date.valueOf("2018-06-01"))
-            throw RuntimeException(
-                "Your licence has expired, contact wecare@pinnacleservice.co if you need to continue using the software"
-            )
-
         thread(name = "Splitter") {
             var errLog: PrintWriter? = null
             try {
